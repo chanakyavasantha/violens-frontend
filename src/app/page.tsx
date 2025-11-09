@@ -36,17 +36,66 @@ export default function Home() {
   const [error, setError] = useState<string>("");
   const [isLoaded, setIsLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [previewWarning, setPreviewWarning] = useState<string>("");
+  const [canPreview, setCanPreview] = useState<boolean>(true);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertProgress, setConvertProgress] = useState(0);
+  const ffmpegRef = useRef<any>(null);
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
 
+  // Load FFmpeg dynamically when needed
+  const ensureFFmpeg = async () => {
+    if (!ffmpegRef.current) {
+      try {
+        // Dynamic import of @ffmpeg/ffmpeg (v0.12.x API)
+        const { FFmpeg } = await import('@ffmpeg/ffmpeg');
+        const { fetchFile } = await import('@ffmpeg/util');
+        const { toBlobURL } = await import('@ffmpeg/util');
+        
+        const ffmpeg = new FFmpeg();
+        
+        ffmpeg.on('log', ({ message }: any) => {
+          console.log(message);
+        });
+        
+        ffmpeg.on('progress', ({ progress }: any) => {
+          setConvertProgress(Math.round((progress || 0) * 100));
+        });
+        
+        // Load FFmpeg core
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        
+        ffmpegRef.current = { ffmpeg, fetchFile };
+      } catch (err) {
+        throw new Error('Failed to load FFmpeg. Please ensure @ffmpeg/ffmpeg and @ffmpeg/util are installed.');
+      }
+    }
+  };
+
   const handleVideoUpload = (file: File) => {
+    // Revoke previous object URL to avoid memory leaks
+    if (videoUrl) {
+      try {
+        URL.revokeObjectURL(videoUrl);
+      } catch (e) {
+        console.error('Failed to revoke object URL:', e);
+      }
+    }
     setUploadedVideo(file);
-    setVideoUrl(URL.createObjectURL(file));
+    const url = URL.createObjectURL(file);
+    setVideoUrl(url);
     setAnalysisResults(null);
     setSelectedDetection(null);
     setError("");
+    setPreviewWarning("");
+    setCanPreview(true); // Reset preview capability for new video
   };
 
   const handleAnalyze = async () => {
@@ -56,39 +105,39 @@ export default function Home() {
     setError("");
 
     try {
-      // TODO: Replace with actual API call to FastAPI backend
-      await new Promise(resolve => setTimeout(resolve, 4000));
-      
-      setAnalysisResults({
-        summary: "Video analysis completed. Detected 3 potential violence scenes with varying confidence levels.",
-        totalDuration: 120,
-        overallRisk: 'medium',
-        violenceDetections: [
-          {
-            startTime: 15.5,
-            endTime: 18.2,
-            confidence: 0.89,
-            type: "Physical Altercation",
-            description: "High confidence detection of physical confrontation between two individuals. Scene shows aggressive body language and potential contact."
-          },
-          {
-            startTime: 45.1,
-            endTime: 47.8,
-            confidence: 0.72,
-            type: "Weapon Detection",
-            description: "Medium confidence detection of potential weapon object. Object appears to be held in threatening manner."
-          },
-          {
-            startTime: 78.3,
-            endTime: 82.1,
-            confidence: 0.94,
-            type: "Aggressive Behavior",
-            description: "Very high confidence detection of aggressive behavior patterns. Multiple indicators suggest escalating confrontation."
-          }
-        ]
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_BASE_URL ||
+        (typeof window !== "undefined" ? `http://${window.location.hostname}:8000` : "");
+
+      if (!baseUrl) {
+        throw new Error("API base URL is not configured (NEXT_PUBLIC_API_BASE_URL).");
+      }
+
+      const formData = new FormData();
+      formData.append("file", uploadedVideo);
+
+      const res = await fetch(`${baseUrl}/analysis`, {
+        method: "POST",
+        body: formData,
       });
-    } catch (err) {
-      setError("Failed to analyze video. Please try again.");
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Analysis failed (${res.status}): ${text}`);
+      }
+
+      const data = await res.json();
+
+      const mapped: AnalysisData = {
+        summary: data.summary ?? "Analysis completed.",
+        totalDuration: data.totalDuration ?? (videoRef.current?.duration ?? 0),
+        overallRisk: data.overallRisk ?? "low",
+        violenceDetections: data.violenceDetections ?? [],
+      };
+
+      setAnalysisResults(mapped);
+    } catch (err: any) {
+      setError(err?.message || "Failed to analyze video. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -106,14 +155,105 @@ export default function Home() {
     setSelectedDetection(detection || null);
   };
 
+  const handleConvertForPreview = async () => {
+    if (!uploadedVideo) return;
+    
+    try {
+      setIsConverting(true);
+      setConvertProgress(0);
+      setError("");
+      
+      await ensureFFmpeg();
+      
+      if (!ffmpegRef.current) {
+        throw new Error('FFmpeg not loaded');
+      }
+      
+      const { ffmpeg, fetchFile } = ffmpegRef.current;
+
+      const ext = uploadedVideo.name.split(".").pop()?.toLowerCase() || "avi";
+      const inputName = `input.${ext}`;
+
+      // Write the file to FFmpeg's virtual filesystem (new API)
+      await ffmpeg.writeFile(inputName, await fetchFile(uploadedVideo));
+      
+      // Convert to MP4 with web-compatible settings
+      await ffmpeg.exec([
+        "-i", inputName,
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        "-movflags", "faststart",
+        "-preset", "fast",
+        "output.mp4"
+      ]);
+
+      // Read the converted file (new API)
+      const data = await ffmpeg.readFile("output.mp4");
+      const convertedBlob = new Blob([data], { type: "video/mp4" });
+      const url = URL.createObjectURL(convertedBlob);
+
+      // Clean up old URL
+      if (videoUrl) { 
+        try { 
+          URL.revokeObjectURL(videoUrl); 
+        } catch (e) {
+          console.error('Failed to revoke object URL:', e);
+        } 
+      }
+      
+      setVideoUrl(url);
+      setCanPreview(true);
+      setPreviewWarning("");
+      
+      // Clean up FFmpeg virtual filesystem (new API)
+      try {
+        await ffmpeg.deleteFile(inputName);
+        await ffmpeg.deleteFile("output.mp4");
+      } catch (e) {
+        console.warn('Failed to clean up FFmpeg files:', e);
+      }
+      
+    } catch (e: any) {
+      console.error('Conversion error:', e);
+      setError(e?.message || "Conversion failed. Try manually converting to MP4/WebM.");
+    } finally {
+      setIsConverting(false);
+      setConvertProgress(0);
+    }
+  };
+
   const resetToHome = () => {
+    // Clean up video URL
+    if (videoUrl) {
+      try {
+        URL.revokeObjectURL(videoUrl);
+      } catch (e) {
+        console.error('Failed to revoke object URL:', e);
+      }
+    }
+    
     setMode('home');
     setUploadedVideo(null);
     setVideoUrl("");
     setAnalysisResults(null);
     setSelectedDetection(null);
     setError("");
+    setPreviewWarning("");
+    setCanPreview(true);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (videoUrl) {
+        try {
+          URL.revokeObjectURL(videoUrl);
+        } catch (e) {
+          console.error('Failed to revoke object URL:', e);
+        }
+      }
+    };
+  }, [videoUrl]);
 
   // Enhanced Home Landing Page
   if (mode === 'home') {
@@ -349,16 +489,54 @@ export default function Home() {
                     
                     <div className="grid lg:grid-cols-2 gap-6">
                       <div className="card p-6">
-                        <video 
-                          ref={videoRef}
-                          src={videoUrl} 
-                          controls 
-                          className="w-full rounded-xl shadow-lg"
-                          onTimeUpdate={(e) => {
-                            const target = e.target as HTMLVideoElement;
-                            setCurrentTime(target.currentTime);
-                          }}
+                        {canPreview ? (
+                          <video
+                            key={videoUrl}
+                            ref={videoRef}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full rounded-xl shadow-lg"
+                            src={videoUrl}
+                            onLoadedMetadata={(e) => {
+                              const target = e.target as HTMLVideoElement;
+                              setCurrentTime(0);
+                            }}
+                            onTimeUpdate={(e) => {
+                              const target = e.target as HTMLVideoElement;
+                              setCurrentTime(target.currentTime);
+                            }}
+                            onError={() => {
+                              setPreviewWarning(
+                                "Preview not supported for this format in this browser. You can still analyze the video."
+                              );
+                              setCanPreview(false);
+                            }}
                           />
+                        ) : (
+                          <div className="rounded-xl p-4 bg-slate-800 border border-slate-700">
+                            <p className="text-slate-300">
+                              Preview not supported for this format in this browser. You can still analyze the video.
+                            </p>
+                            <div className="mt-3">
+                              <button
+                                onClick={handleConvertForPreview}
+                                disabled={isConverting}
+                                className="btn btn-secondary"
+                              >
+                                {isConverting ? `Converting (${convertProgress}%)` : "Convert for Preview"}
+                              </button>
+                            </div>
+                            <p className="mt-2 text-xs text-slate-400">
+                              Conversion runs locally; large files may take time.
+                            </p>
+                          </div>
+                        )}
+                
+                        {previewWarning && (
+                          <p className="mt-2 text-sm text-slate-300">{previewWarning}</p>
+                        )}
+                
                         {!analysisResults && (
                           <div className="mt-6 text-center">
                             <button 

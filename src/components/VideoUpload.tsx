@@ -22,12 +22,21 @@ export default function VideoUpload({ onVideoUpload }: VideoUploadProps) {
       return;
     }
     
+    // Enforce allowed extensions (including .avi)
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    const allowedExts = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm'];
+    if (!allowedExts.includes(ext)) {
+      setError('Unsupported format. Allowed: MP4, AVI, MOV, WMV, FLV, WebM');
+      return;
+    }
+    
     // Validate file size (max 100MB)
     if (file.size > 100 * 1024 * 1024) {
       setError('File size must be less than 100MB');
       return;
     }
     
+    // Do NOT block upload if the browser can’t preview the format.
     setError('');
     onVideoUpload(file);
   }, [onVideoUpload]);
@@ -84,7 +93,8 @@ export default function VideoUpload({ onVideoUpload }: VideoUploadProps) {
           )}
           
           <div className="text-sm text-slate-400 space-y-1">
-            <p>Supported formats: MP4, AVI, MOV, WMV, FLV, WebM</p>
+            <p>Supported for analysis: MP4, AVI, MOV, WMV, FLV, WebM</p>
+            <p>Browser preview works best with MP4/WebM/MOV.</p>
             <p>Maximum file size: 100MB</p>
           </div>
         </div>

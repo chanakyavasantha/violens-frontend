@@ -78,57 +78,58 @@ export default function VideoTimeline({
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 w-full">
       {/* Timeline Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
+          <h3 className="text-xl font-semibold text-white flex items-center space-x-2">
             <Target className="w-5 h-5 text-orange-400" />
             <span>Violence Detection Timeline</span>
           </h3>
-          <div className="flex items-center space-x-2 text-sm text-slate-300">
+          <div className="flex items-center space-x-2 text-base text-slate-100">
             <Clock className="w-4 h-4" />
             <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-4 text-sm">
+
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-base w-full md:w-auto md:justify-end">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-slate-300">High Risk</span>
+            <span className="text-white">High Risk</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-orange-500 rounded"></div>
-            <span className="text-slate-300">Medium Risk</span>
+            <span className="text-white">Medium Risk</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-            <span className="text-slate-300">Low Risk</span>
+            <span className="text-white">Low Risk</span>
           </div>
         </div>
       </div>
-      
+
       {/* Main Timeline */}
       <div className="relative">
         {/* Time Markers */}
-        <div className="flex justify-between text-xs text-slate-400 mb-2">
+        <div className="flex justify-between text-sm text-slate-200 mb-2 font-medium">
           {timeMarkers.map(time => (
             <span key={time} className="text-center">
               {formatTime(time)}
             </span>
           ))}
         </div>
-        
+
         {/* Timeline Track */}
         <div
           ref={timelineRef}
-          className="relative h-16 bg-slate-700 rounded-lg cursor-pointer overflow-hidden"
+          className="relative h-16 md:h-20 bg-slate-800 rounded-lg cursor-pointer overflow-hidden w-full"
           onClick={handleTimelineClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredTime(null)}
+          aria-label="Video analysis timeline"
         >
           {/* Base timeline gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-600 to-slate-700"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800"></div>
           
           {/* Violence Detection Highlights */}
           {violenceDetections.map((detection, index) => {
