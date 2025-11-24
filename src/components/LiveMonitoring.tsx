@@ -196,7 +196,7 @@ export default function LiveMonitoring() {
                 <div className="text-center">
                   <Camera className="w-16 h-16 text-slate-500 mx-auto mb-4" />
                   <p className="text-slate-400">Camera not active</p>
-                  <p className="text-sm text-slate-500">Click "Start Camera" to begin monitoring</p>
+                  <p className="text-sm text-slate-500">Click Start Camera to begin monitoring</p>
                 </div>
               </div>
             )}

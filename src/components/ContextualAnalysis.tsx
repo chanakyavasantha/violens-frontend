@@ -20,13 +20,11 @@ interface AnalysisData {
 interface ContextualAnalysisProps {
   analysisData: AnalysisData;
   selectedDetection: ViolenceDetection | null;
-  currentTime: number;
 }
 
 export default function ContextualAnalysis({
   analysisData,
-  selectedDetection,
-  currentTime
+  selectedDetection
 }: ContextualAnalysisProps) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

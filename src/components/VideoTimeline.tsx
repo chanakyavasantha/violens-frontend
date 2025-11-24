@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { AlertTriangle, Clock, Target } from 'lucide-react';
 
 interface ViolenceDetection {

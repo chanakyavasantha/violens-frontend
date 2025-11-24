@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Camera, Video, ArrowLeft, Shield, Zap, Brain, Play, Sparkles, TrendingUp } from "lucide-react";
+import { Camera, Video, ArrowLeft, Shield, Zap, Brain, Play } from "lucide-react";
 import VideoUpload from "@/components/VideoUpload";
 import VideoTimeline from "@/components/VideoTimeline";
 import ContextualAnalysis from "@/components/ContextualAnalysis";
@@ -40,7 +40,16 @@ export default function Home() {
   const [canPreview, setCanPreview] = useState<boolean>(true);
   const [isConverting, setIsConverting] = useState(false);
   const [convertProgress, setConvertProgress] = useState(0);
-  const ffmpegRef = useRef<any>(null);
+  type FFmpegAPI = {
+    on: (event: 'log' | 'progress', callback: (payload: unknown) => void) => void;
+    load: (opts: { coreURL: string; wasmURL: string }) => Promise<void>;
+    writeFile: (name: string, data: Uint8Array) => Promise<void>;
+    readFile: (name: string) => Promise<Uint8Array>;
+    deleteFile: (name: string) => Promise<void>;
+    exec: (args: string[]) => Promise<void>;
+  };
+  type FetchFileFn = (input: File | Blob | string) => Promise<Uint8Array>;
+  const ffmpegRef = useRef<{ ffmpeg: unknown; fetchFile: FetchFileFn } | null>(null);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -57,12 +66,14 @@ export default function Home() {
         
         const ffmpeg = new FFmpeg();
         
-        ffmpeg.on('log', ({ message }: any) => {
-          console.log(message);
+        ffmpeg.on('log', (payload: unknown) => {
+          const message = (payload as { message?: string })?.message;
+          if (message) console.log(message);
         });
         
-        ffmpeg.on('progress', ({ progress }: any) => {
-          setConvertProgress(Math.round((progress || 0) * 100));
+        ffmpeg.on('progress', (payload: unknown) => {
+          const value = (payload as { progress?: number })?.progress ?? 0;
+          setConvertProgress(Math.round(value * 100));
         });
         
         // Load FFmpeg core
@@ -73,7 +84,7 @@ export default function Home() {
         });
         
         ffmpegRef.current = { ffmpeg, fetchFile };
-      } catch (err) {
+      } catch {
         throw new Error('Failed to load FFmpeg. Please ensure @ffmpeg/ffmpeg and @ffmpeg/util are installed.');
       }
     }
@@ -136,8 +147,9 @@ export default function Home() {
       };
 
       setAnalysisResults(mapped);
-    } catch (err: any) {
-      setError(err?.message || "Failed to analyze video. Please try again.");
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message;
+      setError(msg || "Failed to analyze video. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -170,15 +182,14 @@ export default function Home() {
       }
       
       const { ffmpeg, fetchFile } = ffmpegRef.current;
+      const core = ffmpeg as FFmpegAPI;
 
       const ext = uploadedVideo.name.split(".").pop()?.toLowerCase() || "avi";
       const inputName = `input.${ext}`;
 
-      // Write the file to FFmpeg's virtual filesystem (new API)
-      await ffmpeg.writeFile(inputName, await fetchFile(uploadedVideo));
-      
-      // Convert to MP4 with web-compatible settings
-      await ffmpeg.exec([
+      await core.writeFile(inputName, await fetchFile(uploadedVideo));
+
+      await core.exec([
         "-i", inputName,
         "-c:v", "libx264",
         "-c:a", "aac",
@@ -187,9 +198,8 @@ export default function Home() {
         "output.mp4"
       ]);
 
-      // Read the converted file (new API)
-      const data = await ffmpeg.readFile("output.mp4");
-      const convertedBlob = new Blob([data], { type: "video/mp4" });
+      const data = await core.readFile("output.mp4");
+      const convertedBlob = new Blob([data.buffer as ArrayBuffer], { type: "video/mp4" });
       const url = URL.createObjectURL(convertedBlob);
 
       // Clean up old URL
@@ -205,17 +215,17 @@ export default function Home() {
       setCanPreview(true);
       setPreviewWarning("");
       
-      // Clean up FFmpeg virtual filesystem (new API)
       try {
-        await ffmpeg.deleteFile(inputName);
-        await ffmpeg.deleteFile("output.mp4");
+        await core.deleteFile(inputName);
+        await core.deleteFile("output.mp4");
       } catch (e) {
         console.warn('Failed to clean up FFmpeg files:', e);
       }
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Conversion error:', e);
-      setError(e?.message || "Conversion failed. Try manually converting to MP4/WebM.");
+      const msg = (e as Error)?.message;
+      setError(msg || "Conversion failed. Try manually converting to MP4/WebM.");
     } finally {
       setIsConverting(false);
       setConvertProgress(0);
@@ -498,8 +508,7 @@ export default function Home() {
                             preload="metadata"
                             className="w-full rounded-xl shadow-lg"
                             src={videoUrl}
-                            onLoadedMetadata={(e) => {
-                              const target = e.target as HTMLVideoElement;
+                            onLoadedMetadata={() => {
                               setCurrentTime(0);
                             }}
                             onTimeUpdate={(e) => {
@@ -555,7 +564,6 @@ export default function Home() {
                           <ContextualAnalysis 
                             analysisData={analysisResults}
                             selectedDetection={selectedDetection}
-                            currentTime={currentTime}
                           />
                         </div>
                       )}
