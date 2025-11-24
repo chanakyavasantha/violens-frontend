@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
-import { AlertTriangle, Clock, Target } from 'lucide-react';
+import { AlertTriangle, Clock, Target, Activity } from 'lucide-react';
 
 interface ViolenceDetection {
   startTime: number;
@@ -32,29 +32,29 @@ export default function VideoTimeline({
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    const frames = Math.floor((seconds % 1) * 30); // Assuming 30fps
+    const frames = Math.floor((seconds % 1) * 30);
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
   };
 
   const handleTimelineClick = (e: React.MouseEvent) => {
     if (!timelineRef.current) return;
-    
+
     const rect = timelineRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;
     const time = percentage * duration;
-    
+
     onTimeClick(Math.max(0, Math.min(duration, time)));
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!timelineRef.current) return;
-    
+
     const rect = timelineRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const percentage = mouseX / rect.width;
     const time = percentage * duration;
-    
+
     setHoveredTime(Math.max(0, Math.min(duration, time)));
   };
 
@@ -72,49 +72,50 @@ export default function VideoTimeline({
 
   // Generate time markers
   const timeMarkers = [];
-  const markerInterval = duration > 60 ? 10 : 5; // 10s intervals for long videos, 5s for short
+  const markerInterval = duration > 60 ? 10 : 5;
   for (let i = 0; i <= duration; i += markerInterval) {
     timeMarkers.push(i);
   }
 
   return (
-    <div className="p-4 w-full">
+    <div className="w-full animate-fadeInUp h-full flex flex-col">
       {/* Timeline Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-        <div className="flex items-center flex-wrap gap-4 w-full md:w-auto">
-          <h3 className="text-xl font-semibold text-white flex items-center space-x-2">
-            <Target className="w-5 h-5 text-orange-400" />
-            <span>Violence Detection Timeline</span>
-          </h3>
-          <div className="flex items-center space-x-2 text-base text-slate-100">
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <div className="flex items-center space-x-2">
+          <div className="p-1 bg-orange-500/10 rounded">
+            <Activity className="w-4 h-4 text-orange-400" />
+          </div>
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Timeline</h3>
+          <div className="h-4 w-px bg-white/10 mx-2"></div>
+          <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono">
             <Clock className="w-4 h-4" />
             <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
           </div>
         </div>
 
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-base w-full md:w-auto md:justify-end">
+        <div className="flex items-center gap-4 text-[10px] font-medium bg-white/[0.02] px-3 py-1.5 rounded border border-white/5">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-red-500 rounded"></div>
-            <span className="text-white">High Risk</span>
+            <div className="w-2 h-2 bg-red-500 rounded-full shadow-[0_0_4px_rgba(239,68,68,0.6)]"></div>
+            <span className="text-slate-400">High</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-orange-500 rounded"></div>
-            <span className="text-white">Medium Risk</span>
+            <div className="w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_4px_rgba(249,115,22,0.6)]"></div>
+            <span className="text-slate-400">Medium</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-            <span className="text-white">Low Risk</span>
+            <div className="w-2 h-2 bg-yellow-500 rounded-full shadow-[0_0_4px_rgba(234,179,8,0.6)]"></div>
+            <span className="text-slate-400">Low</span>
           </div>
         </div>
       </div>
 
       {/* Main Timeline */}
-      <div className="relative">
+      <div className="relative select-none flex-1 flex flex-col justify-center">
         {/* Time Markers */}
-        <div className="flex justify-between text-sm text-slate-200 mb-2 font-medium">
-          {timeMarkers.map(time => (
-            <span key={time} className="text-center">
-              {formatTime(time)}
+        <div className="flex justify-between text-[10px] text-slate-600 mb-2 font-mono px-1">
+          {timeMarkers.map((time, i) => (
+            <span key={time} className={`${i % 2 !== 0 ? 'hidden sm:inline' : ''}`}>
+              {formatTime(time).split(':')[1]}:{formatTime(time).split(':')[2]}
             </span>
           ))}
         </div>
@@ -122,80 +123,66 @@ export default function VideoTimeline({
         {/* Timeline Track */}
         <div
           ref={timelineRef}
-          className="relative h-16 md:h-20 bg-slate-800 rounded-lg cursor-pointer overflow-hidden w-full"
+          className="relative h-20 bg-[#050507] rounded-lg cursor-pointer overflow-hidden w-full border border-white/5 shadow-inner group"
           onClick={handleTimelineClick}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredTime(null)}
-          aria-label="Video analysis timeline"
         >
-          {/* Base timeline gradient */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800"></div>
-          
+          {/* Grid Background */}
+          <div className="absolute inset-0 opacity-10"
+            style={{ backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '20px 100%' }}>
+          </div>
+
           {/* Violence Detection Highlights */}
           {violenceDetections.map((detection, index) => {
             const startPercent = (detection.startTime / duration) * 100;
             const widthPercent = ((detection.endTime - detection.startTime) / duration) * 100;
             const isSelected = selectedDetection === detection;
-            
+
             return (
               <div
                 key={index}
                 className={`
-                  absolute top-0 h-full transition-all duration-200
+                  absolute top-1 bottom-1 transition-all duration-300 rounded-sm
                   ${getConfidenceColor(detection.confidence)} ${getConfidenceIntensity(detection.confidence)}
-                  ${isSelected ? 'ring-2 ring-white ring-opacity-80 z-10' : ''}
-                  hover:brightness-110
+                  ${isSelected ? 'ring-2 ring-white ring-opacity-100 z-20 brightness-125' : 'z-10'}
+                  hover:brightness-125 hover:scale-y-105 origin-bottom
                 `}
                 style={{
                   left: `${startPercent}%`,
-                  width: `${widthPercent}%`
+                  width: `${Math.max(widthPercent, 0.5)}%` // Ensure at least minimal width
                 }}
-                title={`${detection.type} (${Math.round(detection.confidence * 100)}% confidence)`}
               >
-                {/* Violence type indicator */}
-                <div className="absolute top-1 left-1 right-1">
-                  <div className="flex items-center justify-between">
-                    <AlertTriangle className="w-3 h-3 text-white" />
-                    <span className="text-xs text-white font-medium">
-                      {Math.round(detection.confidence * 100)}%
-                    </span>
-                  </div>
+                {/* Confidence Label on Hover */}
+                <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-30 pointer-events-none transition-opacity">
+                  {Math.round(detection.confidence * 100)}%
                 </div>
-                
-                {/* Waveform-like pattern for visual appeal */}
-                <div className="absolute bottom-0 left-0 right-0 h-2">
-                  <div className="h-full bg-white/20 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-                </div>
+
+                {/* Visual Pattern */}
+                <div className="w-full h-full opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNCIgaGVpZ2h0PSI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xIDNoMXYxSDF6IiBmaWxsPSIjZmZmIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=')]"></div>
               </div>
             );
           })}
-          
+
           {/* Current Time Indicator */}
           <div
-            className="absolute top-0 w-0.5 h-full bg-white shadow-lg z-20"
+            className="absolute top-0 bottom-0 w-0.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] z-30 transition-all duration-75"
             style={{ left: `${(currentTime / duration) * 100}%` }}
           >
-            <div className="absolute -top-2 -left-2 w-4 h-4 bg-white rounded-full shadow-lg"></div>
+            <div className="absolute -top-1 -left-1.5 w-3 h-3 bg-blue-500 border-2 border-white rounded-full shadow-lg"></div>
           </div>
-          
+
           {/* Hover Time Indicator */}
           {hoveredTime !== null && (
             <div
-              className="absolute top-0 w-px h-full bg-blue-400 opacity-60 z-10"
+              className="absolute top-0 bottom-0 w-px bg-white/30 z-20 pointer-events-none dashed"
               style={{ left: `${(hoveredTime / duration) * 100}%` }}
             >
-              <div className="absolute -top-8 -left-8 bg-blue-500 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+              <div className="absolute top-1 left-1 bg-slate-800/90 text-white text-[10px] px-2 py-1 rounded border border-slate-700 shadow-xl whitespace-nowrap font-mono">
                 {formatTime(hoveredTime)}
               </div>
             </div>
           )}
-        </div>
-        
-        {/* Timeline Scale */}
-        <div className="flex justify-between mt-1">
-          {timeMarkers.map(time => (
-            <div key={time} className="w-px h-2 bg-slate-500"></div>
-          ))}
         </div>
       </div>
     </div>

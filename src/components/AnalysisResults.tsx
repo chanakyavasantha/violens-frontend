@@ -1,13 +1,24 @@
 "use client";
 
-import { Brain, Eye, Heart, Camera, TrendingUp } from 'lucide-react';
+import { Brain, Target, Smile, Film, AlertTriangle } from 'lucide-react';
+
+interface ViolenceDetection {
+  startTime: number;
+  endTime: number;
+  confidence: number;
+  type: string;
+  description: string;
+}
 
 interface AnalysisData {
   summary: string;
+  violenceDetections: ViolenceDetection[];
+  totalDuration: number;
+  overallRisk: 'low' | 'medium' | 'high';
+  confidence: number;
   objects: string[];
   emotions: string[];
   scenes: string[];
-  confidence: number;
 }
 
 interface AnalysisResultsProps {
@@ -15,105 +26,85 @@ interface AnalysisResultsProps {
 }
 
 export default function AnalysisResults({ data }: AnalysisResultsProps) {
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'text-green-400';
-    if (confidence >= 0.6) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const getConfidenceLabel = (confidence: number) => {
-    if (confidence >= 0.8) return 'High';
-    if (confidence >= 0.6) return 'Medium';
-    return 'Low';
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <div className="flex items-center space-x-2 mb-4">
-          <Brain className="w-6 h-6 text-blue-400" />
-          <h3 className="text-xl font-semibold text-white">AI Analysis Results</h3>
-        </div>
-        
-        {/* Confidence Score */}
-        <div className="mb-6 p-4 bg-slate-800/50 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-slate-300">Confidence Score</span>
-            <span className={`font-semibold ${getConfidenceColor(data.confidence)}`}>
-              {getConfidenceLabel(data.confidence)} ({Math.round(data.confidence * 100)}%)
-            </span>
+    <div className="h-full animate-fadeInUp">
+      <div className="card h-full p-2.5 bg-[#0f0f13] border border-white/5 rounded-lg shadow-lg flex flex-col">
+        <div className="flex items-center space-x-1.5 mb-2 shrink-0">
+          <div className="p-0.5 bg-blue-500/10 rounded">
+            <Brain className="w-2.5 h-2.5 text-blue-400" />
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-orange-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${data.confidence * 100}%` }}
-            />
+          <h3 className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">AI Insights</h3>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 flex-1 overflow-hidden">
+          {/* Detected Objects */}
+          <div className="bg-white/[0.02] rounded-md p-2 border border-white/5 flex flex-col overflow-hidden">
+            <div className="flex items-center space-x-1.5 mb-1.5 shrink-0">
+              <Target className="w-2.5 h-2.5 text-purple-400" />
+              <h4 className="font-medium text-slate-400 text-[9px] uppercase tracking-wider">Objects</h4>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {data.objects && data.objects.length > 0 ? (
+                <div className="flex flex-wrap gap-1 content-start">
+                  {data.objects.map((obj, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-purple-500/5 text-purple-300 rounded text-[9px] font-medium border border-purple-500/10 hover:bg-purple-500/10 transition-colors cursor-default whitespace-nowrap">
+                      {obj}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-600 text-[9px] font-medium italic">
+                  None
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {/* Summary */}
-        <div className="mb-6">
-          <h4 className="text-lg font-medium text-white mb-3 flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-orange-400" />
-            <span>Summary</span>
-          </h4>
-          <p className="text-slate-300 leading-relaxed bg-slate-800/30 p-4 rounded-lg">
-            {data.summary}
-          </p>
-        </div>
-      </div>
-      
-      {/* Detected Objects */}
-      <div className="card">
-        <h4 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
-          <Eye className="w-5 h-5 text-blue-400" />
-          <span>Detected Objects</span>
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {data.objects.map((object, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm border border-blue-500/30"
-            >
-              {object}
-            </span>
-          ))}
-        </div>
-      </div>
-      
-      {/* Emotions */}
-      <div className="card">
-        <h4 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
-          <Heart className="w-5 h-5 text-orange-400" />
-          <span>Emotions Detected</span>
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {data.emotions.map((emotion, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-orange-500/20 text-orange-300 rounded-full text-sm border border-orange-500/30"
-            >
-              {emotion}
-            </span>
-          ))}
-        </div>
-      </div>
-      
-      {/* Scene Analysis */}
-      <div className="card">
-        <h4 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
-          <Camera className="w-5 h-5 text-purple-400" />
-          <span>Scene Analysis</span>
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {data.scenes.map((scene, index) => (
-            <span
-              key={index}
-              className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm border border-purple-500/30"
-            >
-              {scene}
-            </span>
-          ))}
+
+          {/* Emotions */}
+          <div className="bg-white/[0.02] rounded-md p-2 border border-white/5 flex flex-col overflow-hidden">
+            <div className="flex items-center space-x-1.5 mb-1.5 shrink-0">
+              <Smile className="w-2.5 h-2.5 text-yellow-400" />
+              <h4 className="font-medium text-slate-400 text-[9px] uppercase tracking-wider">Emotions</h4>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {data.emotions && data.emotions.length > 0 ? (
+                <div className="flex flex-wrap gap-1 content-start">
+                  {data.emotions.map((emotion, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-yellow-500/5 text-yellow-300 rounded text-[9px] font-medium border border-yellow-500/10 hover:bg-yellow-500/10 transition-colors cursor-default whitespace-nowrap">
+                      {emotion}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-600 text-[9px] font-medium italic">
+                  None
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Scene Analysis */}
+          <div className="bg-white/[0.02] rounded-md p-2 border border-white/5 flex flex-col overflow-hidden">
+            <div className="flex items-center space-x-1.5 mb-1.5 shrink-0">
+              <Film className="w-2.5 h-2.5 text-green-400" />
+              <h4 className="font-medium text-slate-400 text-[9px] uppercase tracking-wider">Scenes</h4>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {data.scenes && data.scenes.length > 0 ? (
+                <div className="flex flex-wrap gap-1 content-start">
+                  {data.scenes.map((scene, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-green-500/5 text-green-300 rounded text-[9px] font-medium border border-green-500/10 hover:bg-green-500/10 transition-colors cursor-default whitespace-nowrap">
+                      {scene}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-600 text-[9px] font-medium italic">
+                  None
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
