@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, TrendingUp, Clock, AlertCircle, BarChart3, PieChart, RefreshCw } from "lucide-react";
+import { Activity, TrendingUp, Clock, AlertCircle, BarChart3, PieChart, RefreshCw, Brain, Sparkles, MessageSquare } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface MetricsData {
@@ -22,6 +22,19 @@ interface MetricsData {
     liveSessions: {
         active: number;
         total: number;
+    };
+    model?: {
+        avg_confidence: number;
+        avg_processing_time_s: number;
+    };
+    gemini?: {
+        success_rate: number;
+        total_calls: number;
+    };
+    feedback?: {
+        total: number;
+        false_positive_rate: number;
+        avg_rating: number;
     };
 }
 
@@ -183,6 +196,76 @@ export default function MetricsDashboard() {
                         </div>
                         <div className="text-2xl font-bold text-white mb-1">{errorRate.toFixed(1)}%</div>
                         <div className="text-xs text-slate-400">Error Rate</div>
+                    </div>
+                </div>
+
+                {/* AI & Feedback Metrics Row */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                    {/* Model Performance */}
+                    <div className="card p-5 bg-[#0f0f13] border border-white/5 rounded-xl">
+                        <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <Brain className="w-4 h-4 text-purple-400" />
+                            Model Performance
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {(metrics.model?.avg_confidence || 0).toFixed(2)}
+                                </div>
+                                <div className="text-xs text-slate-400">Avg Confidence</div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {(metrics.model?.avg_processing_time_s || 0).toFixed(1)}s
+                                </div>
+                                <div className="text-xs text-slate-400">Avg Process Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Gemini API Stats */}
+                    <div className="card p-5 bg-[#0f0f13] border border-white/5 rounded-xl">
+                        <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
+                            Gemini API
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {(metrics.gemini?.success_rate || 0).toFixed(1)}%
+                                </div>
+                                <div className="text-xs text-slate-400">Success Rate</div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {metrics.gemini?.total_calls || 0}
+                                </div>
+                                <div className="text-xs text-slate-400">Total Calls</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* User Feedback */}
+                    <div className="card p-5 bg-[#0f0f13] border border-white/5 rounded-xl">
+                        <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-green-400" />
+                            User Feedback
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {(metrics.feedback?.avg_rating || 0).toFixed(1)}
+                                    <span className="text-sm text-slate-500 font-normal ml-1">/ 5</span>
+                                </div>
+                                <div className="text-xs text-slate-400">Avg Rating</div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-white mb-1">
+                                    {(metrics.feedback?.false_positive_rate || 0).toFixed(1)}%
+                                </div>
+                                <div className="text-xs text-slate-400">False Positives</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -384,6 +467,6 @@ export default function MetricsDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

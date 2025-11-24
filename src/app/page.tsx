@@ -11,6 +11,7 @@ import LiveMonitoring from "@/components/LiveMonitoring";
 import HomeView from "@/components/HomeView";
 import AnalysisResults from "@/components/AnalysisResults";
 import MetricsDashboard from "@/components/MetricsDashboard";
+import FeedbackForm from "@/components/FeedbackForm";
 
 interface ViolenceDetection {
   startTime: number;
@@ -450,6 +451,13 @@ export default function Home() {
                                 <p className="text-blue-400 text-sm">Click on a detection in the timeline to view details</p>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Feedback Form */}
+                        {analysisResults && (
+                          <div className="mt-6">
+                            <FeedbackForm analysisId="latest" />
                           </div>
                         )}
                       </div>
