@@ -6,6 +6,7 @@ A polished Next.js + TypeScript frontend for uploading videos, running AI analys
 
 ## Demo Video
 
+[https://drive.google.com/file/d/1t7SQylN68sd8SybEKN5MC2f2c0c9CZlg/view?usp=sharing]()
 
 *Full system demonstration showing video upload, AI analysis, and interactive timeline features.*
 
